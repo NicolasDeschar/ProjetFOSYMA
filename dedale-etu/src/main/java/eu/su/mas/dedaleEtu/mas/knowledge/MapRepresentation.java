@@ -320,14 +320,19 @@ public class MapRepresentation implements Serializable {
 		SingleGraph gn = new SingleGraph("Partial Graph");
 		gn.setAttribute("ui.stylesheet",nodeStyle);
 		Set<SerializableNode<String, MapAttribute>> nodes = sg2.getAllNodes();
+		int i=0;
 		for (SerializableNode<String, MapAttribute> n: sg1.getAllNodes()){
 			if (!nodes.contains(n)) {
 				Node n1;
+				i+=1;
 				n1=gn.addNode(n.getNodeId());
 				n1.clearAttributes();
 				n1.setAttribute("ui.class", n.getNodeContent().toString());
 				n1.setAttribute("ui.label",n.getNodeId());
 			}			
+		}
+		if (i==0) {
+			return null;
 		}
 		SerializableSimpleGraph<String, MapAttribute> sgf = new SerializableSimpleGraph<String,MapAttribute>();
 		Iterator<Node> iter=gn.iterator();
