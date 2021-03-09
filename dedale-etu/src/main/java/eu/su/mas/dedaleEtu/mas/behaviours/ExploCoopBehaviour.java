@@ -2,6 +2,7 @@ package eu.su.mas.dedaleEtu.mas.behaviours;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -72,6 +73,16 @@ public class ExploCoopBehaviour extends SimpleBehaviour {
 
 		if(this.myMap==null) {
 			this.myMap= new MapRepresentation();
+			
+			//boucle temporaire
+			if (this.myAgent.getLocalName().equals("Explo1")) {
+				list_agentNames = Arrays.asList("Explo2");
+			}else {
+				list_agentNames = Arrays.asList("Explo1");
+			}
+			
+			
+			
 			this.myAgent.addBehaviour(new ShareMapBehaviour(this.myAgent,500,this.myMap,list_agentNames));
 		}
 

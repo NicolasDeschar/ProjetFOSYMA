@@ -1,6 +1,7 @@
 package eu.su.mas.dedaleEtu.mas.behaviours;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import dataStructures.serializableGraph.SerializableSimpleGraph;
@@ -26,7 +27,7 @@ public class ShareMapBehaviour extends TickerBehaviour{
 	
 	private MapRepresentation myMap;
 	private List<String> receivers;
-	private List<SerializableSimpleGraph<String, MapAttribute>> maps;
+	private ArrayList<SerializableSimpleGraph<String, MapAttribute>> maps;
 
 	/**
 	 * The agent periodically share its map.
@@ -42,13 +43,10 @@ public class ShareMapBehaviour extends TickerBehaviour{
 		super(a, period);
 		this.myMap=mymap;
 		this.receivers=receivers;
+		System.out.println(this.receivers);
+		maps=new ArrayList<SerializableSimpleGraph<String, MapAttribute>>();
 		int old=receivers.size();
-		for (String agentName : receivers) {
-			maps.add(null);
 		}
-		
-	}
-
 	/**
 	 * 
 	 */
@@ -58,7 +56,7 @@ public class ShareMapBehaviour extends TickerBehaviour{
 	protected void onTick() {
 		//4) At each time step, the agent blindly send all its graph to its surrounding to illustrate how to share its knowledge (the topology currently) with the the others agents. 	
 		// If it was written properly, this sharing action should be in a dedicated behaviour set, the receivers be automatically computed, and only a subgraph would be shared.
-		
+				
 		
 		ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
 		msg.setProtocol("SHARE-TOPO");
@@ -66,25 +64,30 @@ public class ShareMapBehaviour extends TickerBehaviour{
 		int i=0;
 		for (String agentName : receivers) {
 			msg.addReceiver(new AID(agentName,AID.ISLOCALNAME));
-			if (maps.get(i)==null) {
+			System.out.println(agentName);
+			if (maps.size()-1<=i) {
 				SerializableSimpleGraph<String, MapAttribute> sg=this.myMap.getSerializableGraph();
 				try {					
 					msg.setContentObject(sg);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
+				System.out.println("SENT");
 				((AbstractDedaleAgent)this.myAgent).sendMessage(msg);
-				maps.set(i,sg);
+				maps.add(sg);
 			}
 			else {
 				SerializableSimpleGraph<String, MapAttribute> sg=this.myMap.getPartialGraph(maps.get(i));
-				try {					
-					msg.setContentObject(sg);
-				} catch (IOException e) {
-					e.printStackTrace();
+				if (sg!=null) {
+					try {					
+						msg.setContentObject(sg);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					((AbstractDedaleAgent)this.myAgent).sendMessage(msg);
+					System.out.println("SENT");
+					maps.set(i,this.myMap.getSerializableGraph());
 				}
-				((AbstractDedaleAgent)this.myAgent).sendMessage(msg);
-				maps.set(i,this.myMap.getSerializableGraph());
 			}		
 		}
 	}
