@@ -3,10 +3,8 @@ package eu.su.mas.dedaleEtu.mas.knowledge;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -25,7 +23,6 @@ import org.graphstream.ui.view.Viewer.CloseFramePolicy;
 
 import dataStructures.serializableGraph.*;
 import dataStructures.tuple.Couple;
-import jade.core.AID;
 import javafx.application.Platform;
 
 /**
@@ -44,7 +41,7 @@ public class MapRepresentation implements Serializable {
 	 */
 
 	public enum MapAttribute {	
-		agent,open,closed,shared;
+		agent,open,closed;
 
 	}
 
@@ -64,18 +61,17 @@ public class MapRepresentation implements Serializable {
 	private Integer nbEdges;//used to generate the edges ids
 
 	private SerializableSimpleGraph<String, MapAttribute> sg;//used as a temporary dataStructure during migration
-	
-	private Map<AID, String> LastMeetingSpots;
-	private Map<AID,List<String>> SharedNodes;
+
+	private HiddenNodesManager nodemanager;
 
 
 	public MapRepresentation() {
+		this.nodemanager = new HiddenNodesManager(this.g);
 		//System.setProperty("org.graphstream.ui.renderer","org.graphstream.ui.j2dviewer.J2DGraphRenderer");
 		System.setProperty("org.graphstream.ui", "javafx");
 		this.g= new SingleGraph("My world vision");
 		this.g.setAttribute("ui.stylesheet",nodeStyle);
-		this.LastMeetingSpots=new HashMap<AID,String>();
-		this.SharedNodes=new HashMap<AID, List<String>>();
+
 		Platform.runLater(() -> {
 			openGui();
 		});
@@ -133,6 +129,20 @@ public class MapRepresentation implements Serializable {
 
 		}
 	}
+	
+	public synchronized void addEdge(String id,String idNode1,String idNode2){
+		try {
+			this.g.addEdge(id, idNode1, idNode2);
+		}catch (IdAlreadyInUseException e1) {
+			System.err.println("ID existing");
+			System.exit(1);
+		}catch (EdgeRejectedException e2) {
+			this.nbEdges--;
+		} catch(ElementNotFoundException e3){
+
+		}
+	}
+	
 
 	/**
 	 * Compute the shortest Path from idFrom to IdTo. The computation is currently not very efficient
@@ -143,6 +153,33 @@ public class MapRepresentation implements Serializable {
 	 * @return the list of nodes to follow, null if the targeted node is not currently reachable
 	 */
 	public synchronized List<String> getShortestPath(String idFrom,String idTo){
+		List<String> shortestPath=new ArrayList<String>();
+
+		Dijkstra dijkstra = new Dijkstra();//number of edge
+		dijkstra.init(g);
+		dijkstra.setSource(g.getNode(idFrom));
+		dijkstra.compute();//compute the distance to all nodes from idFrom
+		List<Node> path=dijkstra.getPath(g.getNode(idTo)).getNodePath(); //the shortest path from idFrom to idTo
+		Iterator<Node> iter=path.iterator();
+		while (iter.hasNext()){
+			shortestPath.add(iter.next().getId());
+		}
+		dijkstra.clear();
+		if (shortestPath.isEmpty()) {//The openNode is not currently reachable
+			return null;
+		}else {
+			shortestPath.remove(0);//remove the current position
+		}
+		return shortestPath;
+	}
+	
+	
+	public void removeNodeTimer(String id) {
+		this.nodemanager.removeNode(id);
+	}
+	
+	public synchronized List<String> getShortestPathChase(String idFrom,String idTo){
+		this.nodemanager.updateTimers();
 		List<String> shortestPath=new ArrayList<String>();
 
 		Dijkstra dijkstra = new Dijkstra();//number of edge
@@ -288,7 +325,7 @@ public class MapRepresentation implements Serializable {
 				newnode=this.g.addNode(n.getNodeId());
 			}	catch(IdAlreadyInUseException e) {
 				alreadyIn=true;
-				//System.out.println("Already in"+n.getNodeId());
+				System.out.println("Already in"+n.getNodeId());
 			}
 			if (!alreadyIn) {
 				newnode.setAttribute("ui.label", newnode.getId());
@@ -298,8 +335,6 @@ public class MapRepresentation implements Serializable {
 				//3 check its attribute. If it is below the one received, update it.
 				if (((String) newnode.getAttribute("ui.class"))==MapAttribute.closed.toString() || n.getNodeContent().toString()==MapAttribute.closed.toString()) {
 					newnode.setAttribute("ui.class",MapAttribute.closed.toString());
-				}else if(((String) newnode.getAttribute("ui.class"))==MapAttribute.shared.toString() || n.getNodeContent().toString()==MapAttribute.shared.toString()) {
-					newnode.setAttribute("ui.class",MapAttribute.shared.toString());
 				}
 			}
 		}
@@ -310,7 +345,7 @@ public class MapRepresentation implements Serializable {
 				addEdge(n.getNodeId(),s);
 			}
 		}
-		//System.out.println("Merge done");
+		System.out.println("Merge done");
 	}
 
 	/**
@@ -323,35 +358,43 @@ public class MapRepresentation implements Serializable {
 				.findAny()).isPresent();
 	}
 
-
-	public Map<AID,String> getLastMeetingSpots(){
-		return LastMeetingSpots;
-	}
-	public String getLastMeetingSpot(AID agent) {
-		return LastMeetingSpots.get(agent);
-	}
-	
-	public void setLastMeetingSpot(AID agent,String pos) {
-		this.LastMeetingSpots.put(agent, pos);
-	}
-	
-	public List<String> getSharedNodes(AID agent){
-		return SharedNodes.get(agent);
-	}
-	public void addSharedNode(AID agent,String node) {
-		if(SharedNodes.containsKey(agent)) {
-			SharedNodes.get(agent).add(node);
-		}else {
-			
-			List<String> list=new ArrayList<String>();
-			list.add(node);
-			SharedNodes.put(agent, list);
+	public SerializableSimpleGraph<String, MapAttribute> getPartialGraph (SerializableSimpleGraph<String, MapAttribute> sg2) {
+		SerializableSimpleGraph<String, MapAttribute> sg1 = this.getSerializableGraph();
+		sg= new SerializableSimpleGraph<String,MapAttribute>();
+		SingleGraph gn = new SingleGraph("Partial Graph");
+		gn.setAttribute("ui.stylesheet",nodeStyle);
+		Set<SerializableNode<String, MapAttribute>> nodes = sg2.getAllNodes();
+		int i=0;
+		for (SerializableNode<String, MapAttribute> n: sg1.getAllNodes()){
+			if (!nodes.contains(n)) {
+				Node n1;
+				i+=1;
+				n1=gn.addNode(n.getNodeId());
+				n1.clearAttributes();
+				n1.setAttribute("ui.class", n.getNodeContent().toString());
+				n1.setAttribute("ui.label",n.getNodeId());
+			}			
 		}
+		if (i==0) {
+			return null;
+		}
+		SerializableSimpleGraph<String, MapAttribute> sgf = new SerializableSimpleGraph<String,MapAttribute>();
+		Iterator<Node> iter=gn.iterator();
+		while(iter.hasNext()){
+			Node n=iter.next();
+			sgf.addNode(n.getId(),MapAttribute.valueOf((String)n.getAttribute("ui.class")));
+		}
+		Iterator<Edge> iterE=gn.edges().iterator();
+		while (iterE.hasNext()){
+			Edge e=iterE.next();
+			Node sn=e.getSourceNode();
+			Node tn=e.getTargetNode();
+			sgf.addEdge(e.getId(), sn.getId(), tn.getId());
+		}
+		return sgf;
 	}
 
-	public boolean hasSharedNode() {
-		
-		return !SharedNodes.isEmpty();
-	}
+
+
 
 }
