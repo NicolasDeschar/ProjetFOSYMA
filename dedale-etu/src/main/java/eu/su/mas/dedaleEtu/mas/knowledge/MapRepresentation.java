@@ -288,7 +288,7 @@ public class MapRepresentation implements Serializable {
 				newnode=this.g.addNode(n.getNodeId());
 			}	catch(IdAlreadyInUseException e) {
 				alreadyIn=true;
-				//System.out.println("Already in"+n.getNodeId());
+				System.out.println("Already in"+n.getNodeId());
 			}
 			if (!alreadyIn) {
 				newnode.setAttribute("ui.label", newnode.getId());
@@ -352,6 +352,41 @@ public class MapRepresentation implements Serializable {
 	public boolean hasSharedNode() {
 		
 		return !SharedNodes.isEmpty();
+	}
+	public SerializableSimpleGraph<String, MapAttribute> getPartialGraph (SerializableSimpleGraph<String, MapAttribute> sg2) {
+		SerializableSimpleGraph<String, MapAttribute> sg1 = this.getSerializableGraph();
+		sg= new SerializableSimpleGraph<String,MapAttribute>();
+		SingleGraph gn = new SingleGraph("Partial Graph");
+		gn.setAttribute("ui.stylesheet",nodeStyle);
+		Set<SerializableNode<String, MapAttribute>> nodes = sg2.getAllNodes();
+		int i=0;
+		for (SerializableNode<String, MapAttribute> n: sg1.getAllNodes()){
+			if (!nodes.contains(n)) {
+				Node n1;
+				i+=1;
+				n1=gn.addNode(n.getNodeId());
+				n1.clearAttributes();
+				n1.setAttribute("ui.class", n.getNodeContent().toString());
+				n1.setAttribute("ui.label",n.getNodeId());
+			}			
+		}
+		if (i==0) {
+			return null;
+		}
+		SerializableSimpleGraph<String, MapAttribute> sgf = new SerializableSimpleGraph<String,MapAttribute>();
+		Iterator<Node> iter=gn.iterator();
+		while(iter.hasNext()){
+			Node n=iter.next();
+			sgf.addNode(n.getId(),MapAttribute.valueOf((String)n.getAttribute("ui.class")));
+		}
+		Iterator<Edge> iterE=gn.edges().iterator();
+		while (iterE.hasNext()){
+			Edge e=iterE.next();
+			Node sn=e.getSourceNode();
+			Node tn=e.getTargetNode();
+			sgf.addEdge(e.getId(), sn.getId(), tn.getId());
+		}
+		return sgf;
 	}
 
 }

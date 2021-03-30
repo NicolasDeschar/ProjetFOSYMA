@@ -5,9 +5,12 @@ import java.util.List;
 
 import eu.su.mas.dedale.mas.AbstractDedaleAgent;
 import eu.su.mas.dedale.mas.agent.behaviours.startMyBehaviours;
-
+import eu.su.mas.dedaleEtu.mas.behaviours.DialogueBehaviour;
 import eu.su.mas.dedaleEtu.mas.behaviours.ExploCoopBehaviour;
+import eu.su.mas.dedaleEtu.mas.behaviours.ExplorationCoopBehaviour;
+import eu.su.mas.dedaleEtu.mas.behaviours.PingBehaviour;
 import eu.su.mas.dedaleEtu.mas.behaviours.ReceiveOpenNodesBehaviour;
+import eu.su.mas.dedaleEtu.mas.behaviours.ShareMapBehaviour;
 import eu.su.mas.dedaleEtu.mas.knowledge.MapRepresentation;
 
 import jade.core.behaviours.Behaviour;
@@ -35,6 +38,7 @@ public class ExploreCoopAgent extends AbstractDedaleAgent {
 
 	private static final long serialVersionUID = -7969469610241668140L;
 	private MapRepresentation myMap;
+	private boolean pinged=false;
 	
 
 	/**
@@ -49,6 +53,8 @@ public class ExploreCoopAgent extends AbstractDedaleAgent {
 		super.setup();
 		
 		final Object[] args = getArguments();
+		
+
 		
 		List<String> list_agentNames=new ArrayList<String>();
 		
@@ -72,8 +78,10 @@ public class ExploreCoopAgent extends AbstractDedaleAgent {
 		 * 
 		 ************************************************/
 		
-		lb.add(new ExploCoopBehaviour(this,this.myMap,list_agentNames));
-		lb.add(new ReceiveOpenNodesBehaviour(this, myMap));
+		lb.add(new ExplorationCoopBehaviour(this,this.myMap,list_agentNames));
+		lb.add(new PingBehaviour(this, 500, list_agentNames));
+		
+		
 		
 
 		
@@ -89,6 +97,12 @@ public class ExploreCoopAgent extends AbstractDedaleAgent {
 
 	}
 	
+	public boolean getPinged() {
+		return pinged;
+	}
 	
+	public void setPinged(boolean pinged) {
+		this.pinged=pinged;
+	}
 	
 }

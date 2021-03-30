@@ -64,7 +64,7 @@ public class ShareMapBehaviour extends TickerBehaviour{
 		int i=0;
 		for (String agentName : receivers) {
 			msg.addReceiver(new AID(agentName,AID.ISLOCALNAME));
-			System.out.println(agentName);
+			//System.out.println(agentName);
 			if (maps.size()-1<=i) {
 				SerializableSimpleGraph<String, MapAttribute> sg=this.myMap.getSerializableGraph();
 				try {					
