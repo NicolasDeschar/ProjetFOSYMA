@@ -60,6 +60,8 @@ public class ChaseMapRestrictionBehaviour extends SimpleBehaviour {
 	private boolean sendMessage;
 
 	private String newgolemloc;
+	
+	private String nextNode;
 
 
 	public ChaseMapRestrictionBehaviour(final AbstractDedaleAgent myagent, MapRepresentation myMap) {
@@ -67,10 +69,19 @@ public class ChaseMapRestrictionBehaviour extends SimpleBehaviour {
 		this.myMap=myMap;
 		this.openNodes=new ArrayList<String>();
 		this.closedNodes=new HashSet<String>();
+		this.nextNode=null;
 	}
 
 	@Override
 	public void action() {
+		String myPosition=((AbstractDedaleAgent)this.myAgent).getCurrentPosition();
+		if (this.nextNode != null) {
+			if (myPosition.compareTo(((AbstractDedaleAgent)this.myAgent).getCurrentPosition())==0) {
+				this.myMap.removeNodeTimer(nextNode);
+			}
+		}
+		
+		
 		sendMessage=false;
 		List<Couple<String, List<Couple<Observation, Integer>>>> odor = ((AbstractDedaleAgent) this.myAgent).observe();
 		for (int i=0; i<odor.size();i++) {
@@ -135,8 +146,6 @@ public class ChaseMapRestrictionBehaviour extends SimpleBehaviour {
 		if(this.myMap==null)
 			this.myMap= new MapRepresentation();
 		
-		//0) Retrieve the current position
-		String myPosition=((AbstractDedaleAgent)this.myAgent).getCurrentPosition();
 	
 		if (myPosition!=null){
 			//List of observable from the agent's current position
@@ -150,13 +159,11 @@ public class ChaseMapRestrictionBehaviour extends SimpleBehaviour {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+			
 
-			String nextNode = this.myMap.getShortestPathChase(myPosition, golemloc).get(0);
+			this.nextNode = this.myMap.getShortestPathChase(myPosition, golemloc).get(0);
 			if (nextNode !=null) {
 				((AbstractDedaleAgent)this.myAgent).moveTo(nextNode);
-				if (myPosition.compareTo(((AbstractDedaleAgent)this.myAgent).getCurrentPosition())==0) {
-					this.myMap.removeNodeTimer(nextNode);
-				}
 			}
 		}
 
