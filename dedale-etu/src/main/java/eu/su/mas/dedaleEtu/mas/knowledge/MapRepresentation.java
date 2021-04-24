@@ -6,8 +6,10 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.graphstream.algorithm.Dijkstra;
 import org.graphstream.graph.Edge;
@@ -392,6 +394,42 @@ public class MapRepresentation implements Serializable {
 			sgf.addEdge(e.getId(), sn.getId(), tn.getId());
 		}
 		return sgf;
+	}
+
+	public String getAmbushPoint(int nbAgents) {
+		//choose randomly a possible AmbushPoint based on the number of available agents
+		//the point will not be a leaf or a point before a leaf to increase the chances of choosing a passage point
+		List<String> possiblePoints=new ArrayList<String>();
+		
+		Iterator<Node> iter=this.g.iterator();
+		while(iter.hasNext()){
+			Node n=iter.next();
+			if (n.getDegree()<=nbAgents) {
+				possiblePoints.add(n.getId());
+			}
+		}
+			Random rand = new Random();
+			String randomChoice = possiblePoints.get(rand.nextInt(possiblePoints.size()));
+			
+		return randomChoice;
+	}
+
+	public List<String> getSurroundingPoints(String Point) {
+		List<String> points=new ArrayList<String>();
+		Iterator<Node> iter=this.g.iterator();
+		while(iter.hasNext()){
+			Node n=iter.next();
+			if (n.getId()==Point) {
+				Stream<Node> surroundings = n.neighborNodes();
+				List<Node> list=surroundings.collect(Collectors.toList());
+				for (int i=0;i<list.size();i++) {
+					points.add(list.get(i).getId());
+				}
+				return points;
+			}
+			
+		}
+		return points;
 	}
 
 
