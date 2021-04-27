@@ -398,13 +398,13 @@ public class MapRepresentation implements Serializable {
 
 	public String getAmbushPoint(int nbAgents) {
 		//choose randomly a possible AmbushPoint based on the number of available agents
-		//the point will not be a leaf or a point before a leaf to increase the chances of choosing a passage point
+		//the point will not be a leaf to increase the chances of choosing a passage point
 		List<String> possiblePoints=new ArrayList<String>();
 		
 		Iterator<Node> iter=this.g.iterator();
 		while(iter.hasNext()){
 			Node n=iter.next();
-			if (n.getDegree()<=nbAgents) {
+			if ((n.getDegree()<=nbAgents)&&(n.getDegree()!=1)) {
 				possiblePoints.add(n.getId());
 			}
 		}
