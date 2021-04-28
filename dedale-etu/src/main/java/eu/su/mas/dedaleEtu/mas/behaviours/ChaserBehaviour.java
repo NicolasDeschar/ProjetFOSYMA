@@ -22,6 +22,10 @@ import eu.su.mas.dedaleEtu.mas.behaviours.ShareMapBehaviour;
 import jade.core.AID;
 import jade.core.behaviours.Behaviour;
 import jade.core.behaviours.SimpleBehaviour;
+import jade.domain.DFService;
+import jade.domain.FIPAException;
+import jade.domain.FIPAAgentManagement.DFAgentDescription;
+import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import jade.lang.acl.UnreadableException;
@@ -51,21 +55,52 @@ public class ChaserBehaviour extends SimpleBehaviour {
 	
 	private boolean move;
 
+	private List<AID> list_agentNames_chasse;
+
+	private List<AID> list_agentNames_explo;
+	
+	private int nbAgents;
+
 	public ChaserBehaviour(final AbstractDedaleAgent myagent, MapRepresentation myMap, String lastKnownPosition) {
 		super(myagent);
 		this.myMap=myMap;
 		this.lastKnownPosition=lastKnownPosition;
 		this.move=true;
+		this.list_agentNames_chasse=new ArrayList();
+		this.list_agentNames_explo=new ArrayList();
 		
-		//ici boucle pour determiner si le sevice chasse est vide
-		//TODO
-		if (...) {
+		DFAgentDescription dfd = new DFAgentDescription();
+        ServiceDescription sd = new ServiceDescription();sd.setType( "CHASSE" ); 
+        dfd.addServices(sd);
+        DFAgentDescription[] result=null;
+        try {
+             result=DFService.search(this.myAgent , dfd);
+        } catch (FIPAException e) {
+            e.printStackTrace();
+        }
+        for(int i=0;i<result.length;i++) {
+            this.list_agentNames_chasse.add(result[i].getName());
+        }
+        
+        DFAgentDescription dfd1 = new DFAgentDescription();
+        ServiceDescription sd1 = new ServiceDescription();sd1.setType( "EXPLORATION" ); 
+        dfd1.addServices(sd1);
+        DFAgentDescription[] result1=null;
+        try {
+             result1=DFService.search(this.myAgent , dfd1);
+        } catch (FIPAException e) {
+            e.printStackTrace();
+        }
+        for(int i=0;i<result1.length;i++) {
+            this.list_agentNames_explo.add(result1[i].getName());
+        }
+		
+		this.nbAgents=this.list_agentNames_chasse.size()+this.list_agentNames_explo.size();
+		
+		if ((this.list_agentNames_chasse.size()==1)&&(this.list_agentNames_chasse.get(0)==this.myAgent.getAID())) {
 			this.koth=true;
 			System.out.println("I, "+this.myAgent.getLocalName()+" am the king of the hunt");
 			
-			//ici obtention du nombre total d'agents (via somme nbAgents en service chasse + nbAgents en service explo ? )
-			//TODO
-			int nbAgents=...;
 			this.AmbushPoint=myMap.getAmbushPoint(nbAgents);
 			System.out.println("We will try to ambush the target at point "+this.AmbushPoint);
 			this.tick=0;
@@ -98,13 +133,9 @@ public class ChaserBehaviour extends SimpleBehaviour {
 		
 		//ticker management
 		this.tick+=1;
-		if (this.tick>=this.maxiter) {
+		if ((this.tick>=this.maxiter)&&(koth==true)) {
 			System.out.println("It takes to much time, let's try another ambush point.");
-			
-			//ici obtention du nombre total d'agents (via somme nbAgents en service chasse + nbAgents en service explo ? )
-			//TODO
-			int nbAgents=...;
-			this.AmbushPoint=myMap.getAmbushPoint(nbAgents-1);
+			this.AmbushPoint=myMap.getAmbushPoint(nbAgents);
 			System.out.println("We will try to ambush the target at point "+this.AmbushPoint);
 			this.tick=0;
 			this.listAmbushAgentPoints=this.myMap.getSurroundingPoints(this.AmbushPoint);
@@ -152,8 +183,23 @@ public class ChaserBehaviour extends SimpleBehaviour {
 				msg.setProtocol("Chase");
 				msg.setContent("need_ambushers");
 				
-				//ici ajouter tous les agents en chasse en receveurs
-				//TODO
+				this.list_agentNames_chasse=new ArrayList();				
+				DFAgentDescription dfd = new DFAgentDescription();
+		        ServiceDescription sd = new ServiceDescription();sd.setType( "CHASSE" ); 
+		        dfd.addServices(sd);
+		        DFAgentDescription[] result=null;
+		        try {
+		             result=DFService.search(this.myAgent , dfd);
+		        } catch (FIPAException e) {
+		            e.printStackTrace();
+		        }
+		        for(int i=0;i<result.length;i++) {
+		            this.list_agentNames_chasse.add(result[i].getName());
+		        }
+				
+				for (int u=0;u<this.list_agentNames_chasse.size();u++) {
+					msg.addReceiver(this.list_agentNames_chasse.get(u));
+				}
 				
 				((AbstractDedaleAgent)this.myAgent).sendMessage(msg);
 			}
