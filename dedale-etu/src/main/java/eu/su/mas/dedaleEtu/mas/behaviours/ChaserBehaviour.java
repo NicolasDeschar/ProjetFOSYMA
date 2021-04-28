@@ -70,30 +70,30 @@ public class ChaserBehaviour extends SimpleBehaviour {
 		this.list_agentNames_explo=new ArrayList();
 		
 		DFAgentDescription dfd = new DFAgentDescription();
-        ServiceDescription sd = new ServiceDescription();sd.setType( "CHASSE" ); 
-        dfd.addServices(sd);
-        DFAgentDescription[] result=null;
-        try {
-             result=DFService.search(this.myAgent , dfd);
-        } catch (FIPAException e) {
-            e.printStackTrace();
-        }
-        for(int i=0;i<result.length;i++) {
-            this.list_agentNames_chasse.add(result[i].getName());
-        }
-        
-        DFAgentDescription dfd1 = new DFAgentDescription();
-        ServiceDescription sd1 = new ServiceDescription();sd1.setType( "EXPLORATION" ); 
-        dfd1.addServices(sd1);
-        DFAgentDescription[] result1=null;
-        try {
-             result1=DFService.search(this.myAgent , dfd1);
-        } catch (FIPAException e) {
-            e.printStackTrace();
-        }
-        for(int i=0;i<result1.length;i++) {
-            this.list_agentNames_explo.add(result1[i].getName());
-        }
+		ServiceDescription sd = new ServiceDescription();sd.setType( "CHASSE" ); 
+		dfd.addServices(sd);
+		DFAgentDescription[] result=null;
+		try {
+			result=DFService.search(this.myAgent , dfd);
+			} catch (FIPAException e) {
+				e.printStackTrace();
+				}
+		for(int i=0;i<result.length;i++) {
+			this.list_agentNames_chasse.add(result[i].getName());
+			}
+		
+		DFAgentDescription dfd1 = new DFAgentDescription();
+		ServiceDescription sd1 = new ServiceDescription();sd1.setType( "EXPLORATION" ); 
+		dfd1.addServices(sd1);
+		DFAgentDescription[] result1=null;
+		try {
+			result1=DFService.search(this.myAgent , dfd1);
+			} catch (FIPAException e) {
+				e.printStackTrace();
+				}
+		for(int i=0;i<result1.length;i++) {
+			this.list_agentNames_explo.add(result1[i].getName());
+			}
 		
 		this.nbAgents=this.list_agentNames_chasse.size()+this.list_agentNames_explo.size();
 		
@@ -185,17 +185,17 @@ public class ChaserBehaviour extends SimpleBehaviour {
 				
 				this.list_agentNames_chasse=new ArrayList();				
 				DFAgentDescription dfd = new DFAgentDescription();
-		        ServiceDescription sd = new ServiceDescription();sd.setType( "CHASSE" ); 
-		        dfd.addServices(sd);
-		        DFAgentDescription[] result=null;
-		        try {
-		             result=DFService.search(this.myAgent , dfd);
-		        } catch (FIPAException e) {
-		            e.printStackTrace();
-		        }
-		        for(int i=0;i<result.length;i++) {
-		            this.list_agentNames_chasse.add(result[i].getName());
-		        }
+				ServiceDescription sd = new ServiceDescription();sd.setType( "CHASSE" ); 
+				dfd.addServices(sd);
+				DFAgentDescription[] result=null;
+				try {
+					result=DFService.search(this.myAgent , dfd);
+					} catch (FIPAException e) {
+						e.printStackTrace();
+						}
+				for(int i=0;i<result.length;i++) {
+					this.list_agentNames_chasse.add(result[i].getName());
+					}
 				
 				for (int u=0;u<this.list_agentNames_chasse.size();u++) {
 					msg.addReceiver(this.list_agentNames_chasse.get(u));
