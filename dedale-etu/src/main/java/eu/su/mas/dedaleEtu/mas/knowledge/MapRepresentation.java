@@ -3,14 +3,14 @@ package eu.su.mas.dedaleEtu.mas.knowledge;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.Random;
+
 import java.util.stream.Stream;
 
 import org.graphstream.algorithm.Dijkstra;
@@ -25,7 +25,6 @@ import org.graphstream.ui.fx_viewer.FxViewer;
 import org.graphstream.ui.view.Viewer;
 import dataStructures.serializableGraph.*;
 import dataStructures.tuple.Couple;
-import jade.core.AID;
 import javafx.application.Platform;
 
 /**
@@ -64,16 +63,18 @@ public class MapRepresentation implements Serializable {
 	private Integer nbEdges;//used to generate the edges ids
 
 	private SerializableSimpleGraph<String, MapAttribute> sg;//used as a temporary dataStructure during migration
-	
+
 	private HiddenNodesManager nodemanager;
 
 
 	public MapRepresentation() {
+		this.nodemanager = new HiddenNodesManager(this.g);
 		//System.setProperty("org.graphstream.ui.renderer","org.graphstream.ui.j2dviewer.J2DGraphRenderer");
 		this.nodemanager = new HiddenNodesManager(this.g);
 		System.setProperty("org.graphstream.ui", "javafx");
 		this.g= new SingleGraph("My world vision");
 		this.g.setAttribute("ui.stylesheet",nodeStyle);
+
 		Platform.runLater(() -> {
 			openGui();
 		});
@@ -131,6 +132,20 @@ public class MapRepresentation implements Serializable {
 
 		}
 	}
+	
+	public synchronized void addEdge(String id,String idNode1,String idNode2){
+		try {
+			this.g.addEdge(id, idNode1, idNode2);
+		}catch (IdAlreadyInUseException e1) {
+			System.err.println("ID existing");
+			System.exit(1);
+		}catch (EdgeRejectedException e2) {
+			this.nbEdges--;
+		} catch(ElementNotFoundException e3){
+
+		}
+	}
+	
 
 	/**
 	 * Compute the shortest Path from idFrom to IdTo. The computation is currently not very efficient
@@ -141,6 +156,33 @@ public class MapRepresentation implements Serializable {
 	 * @return the list of nodes to follow, null if the targeted node is not currently reachable
 	 */
 	public synchronized List<String> getShortestPath(String idFrom,String idTo){
+		List<String> shortestPath=new ArrayList<String>();
+
+		Dijkstra dijkstra = new Dijkstra();//number of edge
+		dijkstra.init(g);
+		dijkstra.setSource(g.getNode(idFrom));
+		dijkstra.compute();//compute the distance to all nodes from idFrom
+		List<Node> path=dijkstra.getPath(g.getNode(idTo)).getNodePath(); //the shortest path from idFrom to idTo
+		Iterator<Node> iter=path.iterator();
+		while (iter.hasNext()){
+			shortestPath.add(iter.next().getId());
+		}
+		dijkstra.clear();
+		if (shortestPath.isEmpty()) {//The openNode is not currently reachable
+			return null;
+		}else {
+			shortestPath.remove(0);//remove the current position
+		}
+		return shortestPath;
+	}
+	
+	
+	public void removeNodeTimer(String id) {
+		this.nodemanager.removeNode(id);
+	}
+	
+	public synchronized List<String> getShortestPathChase(String idFrom,String idTo){
+		this.nodemanager.updateTimers();
 		List<String> shortestPath=new ArrayList<String>();
 
 		Dijkstra dijkstra = new Dijkstra();//number of edge
@@ -276,6 +318,7 @@ public class MapRepresentation implements Serializable {
 	public void mergeMap(SerializableSimpleGraph<String, MapAttribute> sgreceived) {
 		//System.out.println("You should decide what you want to save and how");
 		//System.out.println("We currently blindy add the topology");
+
 		if(sgreceived != null) {
 			for (SerializableNode<String, MapAttribute> n: sgreceived.getAllNodes()){
 				//System.out.println(n);
@@ -306,8 +349,9 @@ public class MapRepresentation implements Serializable {
 					addEdge(n.getNodeId(),s);
 				}
 			}
-		//System.out.println("Merge done");
+
 		}
+		System.out.println("Merge done");
 	}
 
 	/**
@@ -319,7 +363,6 @@ public class MapRepresentation implements Serializable {
 				.filter(n -> n.getAttribute("ui.class")==MapAttribute.open.toString())
 				.findAny()).isPresent();
 	}
-
 
 	public SerializableSimpleGraph<String, MapAttribute> getPartialGraph (SerializableSimpleGraph<String, MapAttribute> sg2) {
 		SerializableSimpleGraph<String, MapAttribute> sg1 = this.getSerializableGraph();
@@ -356,6 +399,7 @@ public class MapRepresentation implements Serializable {
 		}
 		return sgf;
 	}
+
 	public List<String> getAmbushPoint(int nbAgents, int nbGolem, int mode) {
 		//choose randomly a possible AmbushPoint based on the number of available agents
 		//the point will not be a leaf or a point before a leaf to increase the chances of choosing a passage point
