@@ -396,10 +396,12 @@ public class MapRepresentation implements Serializable {
 		return sgf;
 	}
 
-	public String getAmbushPoint(int nbAgents) {
+	public List<String> getAmbushPoint(int nbAgents, int nbGolem, int mode) {
 		//choose randomly a possible AmbushPoint based on the number of available agents
-		//the point will not be a leaf to increase the chances of choosing a passage point
+		//the point will not be a leaf or a point before a leaf to increase the chances of choosing a passage point
+		List<String> choice=new ArrayList();
 		List<String> possiblePoints=new ArrayList<String>();
+		Random rand = new Random();
 		
 		Iterator<Node> iter=this.g.iterator();
 		while(iter.hasNext()){
@@ -408,10 +410,49 @@ public class MapRepresentation implements Serializable {
 				possiblePoints.add(n.getId());
 			}
 		}
-			Random rand = new Random();
-			String randomChoice = possiblePoints.get(rand.nextInt(possiblePoints.size()));
-			
-		return randomChoice;
+			if (mode==1) {
+				
+				choice.add(possiblePoints.get(rand.nextInt(possiblePoints.size())));
+		}
+		else {
+			if (mode==2) {
+				boolean done=false;
+				while (!done) {
+					List<String> choices=new ArrayList<String>();
+					for (int q=0;q<nbGolem;q++) {
+						String choice1 = possiblePoints.get(rand.nextInt(possiblePoints.size()));
+						while (choices.contains(choice1)) {
+							choice1 = possiblePoints.get(rand.nextInt(possiblePoints.size()));
+						}
+						choices.add(choice1);
+					}
+					int s=0;
+					for (int q=0;q<nbGolem;q++) {
+						s+=getSurroundingPoints(choices.get(q)).size();
+					}
+					if (s<=nbAgents) {
+						done=true;
+						choice=choices;
+					}
+				}
+			}
+			else {
+				if (mode==3) {
+					int nbrestant=nbAgents;
+					while((nbrestant>2)&&(possiblePoints.size()>1)) {
+						String choice1 = possiblePoints.get(rand.nextInt(possiblePoints.size()));
+						while ((choice.contains(choice1))||(getSurroundingPoints(choice1).size()>nbrestant)) {
+							possiblePoints.remove(choice1);
+							choice1 = possiblePoints.get(rand.nextInt(possiblePoints.size()));
+						}
+						choice.add(choice1);
+						nbrestant-=getSurroundingPoints(choice1).size();
+					}
+				}
+			}
+		}
+				
+		return choice;
 	}
 
 	public List<String> getSurroundingPoints(String Point) {
