@@ -410,12 +410,15 @@ public class MapRepresentation implements Serializable {
 		Iterator<Node> iter=this.g.iterator();
 		while(iter.hasNext()){
 			Node n=iter.next();
-			if ((n.getDegree()<=nbAgents)&&(n.getDegree()!=1)) {
-				possiblePoints.add(n.getId());
+			if (n.getDegree()<=nbAgents){
+				if (n.getDegree()!=1) {
+					possiblePoints.add(n.getId());
+				}
+				
 			}
 		}
 			if (mode==1) {
-				
+				System.out.println("size :"+ possiblePoints.size());
 				choice.add(possiblePoints.get(rand.nextInt(possiblePoints.size())));
 		}
 		else {
