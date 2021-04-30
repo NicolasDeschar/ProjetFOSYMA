@@ -40,7 +40,7 @@ public class ExploBehaviour extends OneShotBehaviour {
 	            for (int j=0;j<l.size();j++) {
 	                Couple<Observation, Integer> da = l.get(j);
 	                Observation obs = da.getLeft();
-	                if (obs.getName().compareTo("STENCH")==0){
+	                if (obs.getName().compareTo("Stench")==0){
 	                    this.myAgent.setLastKnowPosition(pos);
 	                }
 	            }

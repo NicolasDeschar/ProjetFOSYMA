@@ -16,9 +16,6 @@ import eu.su.mas.dedale.mas.AbstractDedaleAgent;
 
 import eu.su.mas.dedaleEtu.mas.knowledge.MapRepresentation.MapAttribute;
 import eu.su.mas.dedaleEtu.mas.knowledge.MapRepresentation;
-import eu.su.mas.dedaleEtu.mas.behaviours.ShareMapBehaviour;
-
-
 import jade.core.AID;
 import jade.core.behaviours.Behaviour;
 import jade.core.behaviours.SimpleBehaviour;
@@ -47,18 +44,35 @@ public class AmbusherBehaviour extends SimpleBehaviour {
 
 	public AmbusherBehaviour(final AbstractDedaleAgent myagent, MapRepresentation myMap,String objective, int ticker, int time_limit) {
 		super(myagent);
+		System.out.println("Ambusher behavor created");
 		this.myMap=myMap;
 		this.objective=objective;
 		this.ticker=ticker;
 		this.time_limit=time_limit;
 		this.accomplished=false;
 		this.timed=true;
+		System.out.println(this.myAgent.getLocalName()+", My job is to block point "+objective);
 		
 		
 	}
 
 	@Override
 	public void action() {
+		System.out.println("I have to block position "+this.objective+" and I am at position "+((AbstractDedaleAgent)this.myAgent).getCurrentPosition());
+		List<Couple<String, List<Couple<Observation, Integer>>>> odor = ((AbstractDedaleAgent) this.myAgent).observe();
+		for (int i=0; i<odor.size();i++) {
+			Couple<String, List<Couple<Observation, Integer>>> data = odor.get(i);
+			String pos = data.getLeft();
+			List<Couple<Observation, Integer>> l = data.getRight();
+			for (int j=0;j<l.size();j++) {
+				Couple<Observation, Integer> da = l.get(j);
+				Observation obs = da.getLeft();
+				if (obs.getName().compareTo("Stench")==0){
+					System.out.println(this.myAgent.getLocalName()+" ,I sense a golem near me, better stop my timer for a potential blocking");
+					this.timed=false;
+					}
+				}
+			}
 		if (timed) {
 			this.ticker+=1;
 		}
@@ -67,27 +81,22 @@ public class AmbusherBehaviour extends SimpleBehaviour {
 		ACLMessage msgReceived=this.myAgent.receive(msgTemplate);
 		if (msgReceived!=null) {
 			String sgreceived=null;
-			try {
-				sgreceived = (String)msgReceived.getContentObject();
-			} catch (UnreadableException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			sgreceived = (String)msgReceived.getContent();
 			if (sgreceived.compareTo("is_golem_blocked")==0) {
 				AID sender = msgReceived.getSender();
 				ACLMessage msg=new ACLMessage(ACLMessage.INFORM);
 				msg.setSender(this.myAgent.getAID());
 				msg.setProtocol("Chase");
 				boolean y=false;
-				List<Couple<String, List<Couple<Observation, Integer>>>> odor = ((AbstractDedaleAgent) this.myAgent).observe();
-				for (int i=0; i<odor.size();i++) {
-					Couple<String, List<Couple<Observation, Integer>>> data = odor.get(i);
+				List<Couple<String, List<Couple<Observation, Integer>>>> odor1 = ((AbstractDedaleAgent) this.myAgent).observe();
+				for (int i=0; i<odor1.size();i++) {
+					Couple<String, List<Couple<Observation, Integer>>> data = odor1.get(i);
 					String pos = data.getLeft();
 					List<Couple<Observation, Integer>> l = data.getRight();
 					for (int j=0;j<l.size();j++) {
 						Couple<Observation, Integer> da = l.get(j);
 						Observation obs = da.getLeft();
-						if (obs.getName().compareTo("STENCH")==0){
+						if (obs.getName().compareTo("Stench")==0){
 							y=true;
 							}
 						}
@@ -121,13 +130,16 @@ public class AmbusherBehaviour extends SimpleBehaviour {
 			String myPosition=((AbstractDedaleAgent)this.myAgent).getCurrentPosition();
 			List<String> route = this.myMap.getShortestPath(myPosition,objective);
 			if (route.size()==0) {
-				System.out.println("I am at the objective point");
+				System.out.println(this.myAgent.getLocalName()+", I am at the objective point");
 				this.accomplished=true;
 			}
 			else {
 				String nextNode = route.get(0);
 				((AbstractDedaleAgent)this.myAgent).moveTo(nextNode);
 				}
+			}
+		else {
+			System.out.println(this.myAgent.getLocalName()+", I am blocking point "+this.objective);
 			}
 		}
 	}

@@ -1,5 +1,9 @@
 package eu.su.mas.dedaleEtu.mas.behaviours;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import eu.su.mas.dedale.mas.AbstractDedaleAgent;
 import eu.su.mas.dedaleEtu.mas.agents.dummies.explo.ExploreCoopAgent;
 import jade.core.Agent;
 import jade.core.behaviours.OneShotBehaviour;
@@ -7,6 +11,8 @@ import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
+import jade.core.behaviours.Behaviour;
+import eu.su.mas.dedale.mas.agent.behaviours.startMyBehaviours;
 
 public class EndExploBehaviour extends OneShotBehaviour{
 	// cette classe est utilisée à la fin de l'exploration de carte, on inscrit l'agent au service chasse et on commence la behaviour de chasse
@@ -39,7 +45,14 @@ public class EndExploBehaviour extends OneShotBehaviour{
 		try{DFService. register ( this.myAgent , dfd );} 
 		catch (FIPAException fe) {fe . printStackTrace(); }
 		((ExploreCoopAgent) this.myAgent).endExplo();
-		this.myAgent.addBehaviour( new ChaserBehaviour(this.myAgent,((ExploreCoopAgent) this.myAgent).getMap(),((ExploreCoopAgent) this.myAgent).getLastKnownPosition()));
+		System.out.println("explo_ended,start chase");
+		List<Behaviour> lb=new ArrayList<Behaviour>();
+		ChaserBehaviour b = new ChaserBehaviour((AbstractDedaleAgent)this.myAgent,((ExploreCoopAgent) this.myAgent).getMap(),((ExploreCoopAgent) this.myAgent).getLastKnownPosition(),-1);
+		this.myAgent.addBehaviour(b);
+		lb.add(b);
+		this.myAgent.addBehaviour(new startMyBehaviours((AbstractDedaleAgent)this.myAgent,lb));
+		System.out.println("chase behavior created");
+		
 		
 	}
 	

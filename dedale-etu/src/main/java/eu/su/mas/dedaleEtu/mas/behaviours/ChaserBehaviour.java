@@ -16,9 +16,6 @@ import eu.su.mas.dedale.mas.AbstractDedaleAgent;
 
 import eu.su.mas.dedaleEtu.mas.knowledge.MapRepresentation.MapAttribute;
 import eu.su.mas.dedaleEtu.mas.knowledge.MapRepresentation;
-import eu.su.mas.dedaleEtu.mas.behaviours.ShareMapBehaviour;
-
-
 import jade.core.AID;
 import jade.core.behaviours.Behaviour;
 import jade.core.behaviours.SimpleBehaviour;
@@ -38,7 +35,7 @@ public class ChaserBehaviour extends SimpleBehaviour {
 	
 	private MapRepresentation myMap;
 	
-	private boolean koth=false;
+	private boolean koth;
 	
 	private List<String> AmbushPoint;
 
@@ -73,8 +70,13 @@ public class ChaserBehaviour extends SimpleBehaviour {
 	
 	private String blok;
 
+	private int ambusher_sent;
+	
+	private  int message_timer;
+
 	public ChaserBehaviour(final AbstractDedaleAgent myagent, MapRepresentation myMap, String lastKnownPosition, int nbGolem) {
 		super(myagent);
+		System.out.println("I am alive ");
 		this.myMap=myMap;
 		this.lastKnownPosition=lastKnownPosition;
 		this.move=true;
@@ -84,6 +86,10 @@ public class ChaserBehaviour extends SimpleBehaviour {
 		this.mode=1;
 		this.oldpos=((AbstractDedaleAgent)this.myAgent).getCurrentPosition();
 		this.listblockers=new ArrayList<AID>();
+		this.koth=true;
+		this.ambusher_sent=0;
+		this.message_timer=0;
+		System.out.println(this.myAgent.getLocalName()+", my last known position is "+this.lastKnownPosition);
 		
 		DFAgentDescription dfd = new DFAgentDescription();
 		ServiceDescription sd = new ServiceDescription();sd.setType( "CHASSE" ); 
@@ -113,37 +119,33 @@ public class ChaserBehaviour extends SimpleBehaviour {
 		
 		this.nbAgents=this.list_agentNames_explo.size()+this.list_agentNames_chasse.size();
 		
-		if ((this.list_agentNames_chasse.size()==1)&&(this.list_agentNames_chasse.get(0)==this.myAgent.getAID())) {
-			this.koth=true;
-			System.out.println("I, "+this.myAgent.getLocalName()+" am the king of the hunt");
+		this.AmbushPoint=myMap.getAmbushPoint(nbAgents,this.nbGolem, this.mode);
+		System.out.println(this.myAgent.getLocalName()+", We will try to ambush the target at point "+this.AmbushPoint.toString());
+		this.tick=0;
+		this.listAmbushAgentPoints=new ArrayList<String>();
+		for (int j=0;j<this.AmbushPoint.size();j++) {
+			List<String> tempora = this.myMap.getSurroundingPoints(this.AmbushPoint.get(j));
 			
-			this.AmbushPoint=myMap.getAmbushPoint(nbAgents,this.nbGolem, this.mode);
-			System.out.println("We will try to ambush the target at point "+this.AmbushPoint.toString());
-			this.tick=0;
-			this.listAmbushAgentPoints=new ArrayList<String>();
-			for (int j=0;j<this.AmbushPoint.size();j++) {
-				List<String> tempora = this.myMap.getSurroundingPoints(this.AmbushPoint.get(j));
-				
-				//on retire le point le plus proche pour laisser un passage au golem
-				List<Integer> distances=new ArrayList<Integer>();
-				for (int i=0;i<tempora.size();i++) {
-					String point=tempora.get(i);
-					distances.add(this.myMap.getShortestPath(((AbstractDedaleAgent)this.myAgent).getCurrentPosition(),point).size());
+			//on retire le point le plus proche pour laisser un passage au golem
+			List<Integer> distances=new ArrayList<Integer>();
+			for (int i=0;i<tempora.size();i++) {
+				String point=tempora.get(i);
+				distances.add(this.myMap.getShortestPath(((AbstractDedaleAgent)this.myAgent).getCurrentPosition(),point).size());
+			}
+			int argmin=-1;
+			int min=Integer.MAX_VALUE;
+			for (int i=0;i<distances.size();i++) {
+				if (distances.get(i)<min) {
+					min=distances.get(i);
+					argmin=i;
 				}
-				int argmin=-1;
-				int min=Integer.MAX_VALUE;
-				for (int i=0;i<distances.size();i++) {
-					if (distances.get(i)<min) {
-						min=distances.get(i);
-						argmin=i;
-					}
-				}
-				tempora.remove(argmin);
-				this.listAmbushAgentPoints.addAll(tempora);
-			}	
+			}
+			tempora.remove(argmin);
+			this.listAmbushAgentPoints.addAll(tempora);
 		}
-		
+		System.out.println("For this, I will need "+this.listAmbushAgentPoints.size()+" agents to block points "+this.listAmbushAgentPoints.toString());
 	}
+		
 
 	@Override
 	public void action() {
@@ -160,7 +162,7 @@ public class ChaserBehaviour extends SimpleBehaviour {
 				for (int j=0;j<l.size();j++) {
 					Couple<Observation, Integer> da = l.get(j);
 					Observation obs = da.getLeft();
-					if (obs.getName().compareTo("STENCH")==0){
+					if (obs.getName().compareTo("Stench")==0){
 						gol=true;
 						this.blok=pos;
 					}
@@ -168,7 +170,7 @@ public class ChaserBehaviour extends SimpleBehaviour {
 			}
 			if (gol) {
 				this.listblockers=new ArrayList<AID>();
-				System.out.println("Seems that I am blocked by the golem, maybe he's trapped");
+				System.out.println(this.myAgent.getLocalName()+", Seems that I am blocked by the golem, maybe he's trapped");
 				ACLMessage msg=new ACLMessage(ACLMessage.INFORM);
 				msg.setSender(this.myAgent.getAID());
 				msg.setProtocol("Chase");
@@ -187,6 +189,17 @@ public class ChaserBehaviour extends SimpleBehaviour {
 				for(int i=0;i<result.length;i++) {
 					this.list_agentNames_chasse.add(result[i].getName());
 					}
+				
+				
+				for (int k=0;k<this.list_agentNames_chasse.size();k++){
+					String elem = this.list_agentNames_chasse.get(k).toString();
+					if (elem.compareTo(this.myAgent.getAID().toString())==0) {
+						this.list_agentNames_chasse.remove(k);
+						k-=1;
+					}
+				}
+					
+					
 				
 				for (int u=0;u<this.list_agentNames_chasse.size();u++) {
 					msg.addReceiver(this.list_agentNames_chasse.get(u));
@@ -240,8 +253,9 @@ public class ChaserBehaviour extends SimpleBehaviour {
 			for (int j=0;j<l.size();j++) {
 				Couple<Observation, Integer> da = l.get(j);
 				Observation obs = da.getLeft();
-				if (obs.getName().compareTo("STENCH")==0){
+				if (obs.getName().compareTo("Stench")==0){
 					this.lastKnownPosition=pos;
+					System.out.println(this.myAgent.getLocalName()+", found the golem");
 				}
 			}
 		}
@@ -269,11 +283,20 @@ public class ChaserBehaviour extends SimpleBehaviour {
 					this.list_agentNames_chasse.add(result[i].getName());
 					}
 				
+				for (int k=0;k<this.list_agentNames_chasse.size();k++){
+					String elem = this.list_agentNames_chasse.get(k).toString();
+					if (elem.compareTo(this.myAgent.getAID().toString())==0) {
+						this.list_agentNames_chasse.remove(k);
+						k-=1;
+					}
+				}
+				
 				for (int u=0;u<this.list_agentNames_chasse.size();u++) {
 					msg.addReceiver(this.list_agentNames_chasse.get(u));
 				}
 				
 				((AbstractDedaleAgent)this.myAgent).sendMessage(msg);
+				System.out.println(this.myAgent.getLocalName()+",send an ambusher request");
 			}
 		}
 		
@@ -282,22 +305,30 @@ public class ChaserBehaviour extends SimpleBehaviour {
 		ACLMessage msgReceived=this.myAgent.receive(msgTemplate);
 		if (msgReceived!=null) {
 			String sgreceived=null;
-			try {
-				sgreceived = (String)msgReceived.getContentObject();
-			} catch (UnreadableException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			sgreceived = (String)msgReceived.getContent();
 			if (sgreceived.compareTo("need_ambushers")==0) {
-				this.move=false;
-				AID sender = msgReceived.getSender();
-				ACLMessage msg=new ACLMessage(ACLMessage.INFORM);
-				msg.setSender(this.myAgent.getAID());
-				msg.setProtocol("Chase");
-				msg.setContent("here");
-				msg.addReceiver(sender);				
-				((AbstractDedaleAgent)this.myAgent).sendMessage(msg);
-				
+				System.out.println(this.myAgent.getLocalName()+", received an ambusher request");
+				if (this.koth==true) {
+					this.move=false;
+					AID sender = msgReceived.getSender();
+					ACLMessage msg=new ACLMessage(ACLMessage.INFORM);
+					msg.setSender(this.myAgent.getAID());
+					msg.setProtocol("Chase");
+					msg.setContent("T"+this.ambusher_sent);
+					msg.addReceiver(sender);				
+					((AbstractDedaleAgent)this.myAgent).sendMessage(msg);	
+				}
+				else {
+					this.move=false;
+					AID sender = msgReceived.getSender();
+					ACLMessage msg=new ACLMessage(ACLMessage.INFORM);
+					msg.setSender(this.myAgent.getAID());
+					msg.setProtocol("Chase");
+					msg.setContent("here");
+					msg.addReceiver(sender);				
+					((AbstractDedaleAgent)this.myAgent).sendMessage(msg);
+				}
+					
 			}
 			else {
 				if (sgreceived.compareTo("here")==0) {
@@ -325,6 +356,8 @@ public class ChaserBehaviour extends SimpleBehaviour {
 						msg.setContent(poen);
 						msg.addReceiver(sender);				
 						((AbstractDedaleAgent)this.myAgent).sendMessage(msg);
+						this.ambusher_sent+=1;
+						this.move=true;
 					}
 					else {
 						AID sender = msgReceived.getSender();
@@ -334,6 +367,7 @@ public class ChaserBehaviour extends SimpleBehaviour {
 						msg.setContent("not_needed");
 						msg.addReceiver(sender);				
 						((AbstractDedaleAgent)this.myAgent).sendMessage(msg);
+						this.move=true;
 					}
 				}
 				else {
@@ -348,12 +382,13 @@ public class ChaserBehaviour extends SimpleBehaviour {
 						else {
 							if (sgreceived.compareTo("nope")==0) {
 								this.listblockers=new ArrayList<AID>();
+								this.move=true;
 							}
 							else {
 								if (sgreceived.compareTo("seems_to_me")==0) {
 									this.listblockers.add(msgReceived.getSender());
 									if (this.listblockers.size()>=this.myMap.getSurroundingPoints(this.blok).size()) {
-										System.out.println("The golem is blocked, stop moving");
+										System.out.println(this.myAgent.getLocalName()+", The golem is blocked, stop moving");
 										ACLMessage msg=new ACLMessage(ACLMessage.INFORM);
 										msg.setSender(this.myAgent.getAID());
 										msg.setProtocol("Chase");
@@ -363,11 +398,78 @@ public class ChaserBehaviour extends SimpleBehaviour {
 										}
 										((AbstractDedaleAgent)this.myAgent).sendMessage(msg);
 										}
-									}			
+									}
 								else {
-									String objectivepoint=sgreceived;
-									this.myAgent.addBehaviour(new AmbusherBehaviour((AbstractDedaleAgent) this.myAgent,this.myMap,objectivepoint, this.tick, this.maxiter));
-									this.finished=true; 
+									if (sgreceived.charAt(0)=='T') {
+										String sub=sgreceived.substring(1,sgreceived.length());
+										int othersent= Integer.parseInt(sub);
+										System.out.println("my ambusher count : "+this.ambusher_sent);
+										System.out.println("the other's ambusher count"+ othersent);
+										if (othersent>this.ambusher_sent) {
+											this.koth=false;
+											AID sender = msgReceived.getSender();
+											ACLMessage msg=new ACLMessage(ACLMessage.INFORM);
+											msg.setSender(this.myAgent.getAID());
+											msg.setProtocol("Chase");
+											msg.setContent("you_lead");
+											msg.addReceiver(sender);				
+											((AbstractDedaleAgent)this.myAgent).sendMessage(msg);
+											this.move=true;
+											System.out.println(this.myAgent.getLocalName()+" won't be the leader");
+											
+										}
+										else {
+											if (othersent<this.ambusher_sent) {
+												this.move=true;
+											}
+											else {
+												AID sender = msgReceived.getSender();
+												ACLMessage msg=new ACLMessage(ACLMessage.INFORM);
+												msg.setSender(this.myAgent.getAID());
+												msg.setProtocol("Chase");
+												msg.setContent("A"+this.myAgent.getLocalName());
+												msg.addReceiver(sender);				
+												((AbstractDedaleAgent)this.myAgent).sendMessage(msg);
+												this.move=true;
+											}
+											
+										}
+										
+									}
+									else {
+										if (sgreceived.charAt(0)=='A') {
+											String sub1=sgreceived.substring(6,sgreceived.length());
+											int otherID= Integer.parseInt(sub1);
+											int myID=Integer.parseInt(this.myAgent.getLocalName().substring(5,this.myAgent.getLocalName().length()));
+											if (otherID<myID) {
+												this.koth=false;
+												AID sender = msgReceived.getSender();
+												ACLMessage msg=new ACLMessage(ACLMessage.INFORM);
+												msg.setSender(this.myAgent.getAID());
+												msg.setProtocol("Chase");
+												msg.setContent("you_lead");
+												msg.addReceiver(sender);				
+												((AbstractDedaleAgent)this.myAgent).sendMessage(msg);
+												this.move=true;
+												System.out.println(this.myAgent.getLocalName()+" won't be the leader");
+												
+											}
+											else {
+												this.move=true;
+												}
+											}
+										else {
+											if (sgreceived.compareTo("you_lead")==0) {
+												this.koth=true;
+												this.move=true;
+												
+											}
+										else {
+											String objectivepoint=sgreceived;
+											this.myAgent.addBehaviour(new AmbusherBehaviour((AbstractDedaleAgent) this.myAgent,this.myMap,objectivepoint, this.tick, this.maxiter));
+											this.finished=true; 
+											}
+										}
 									}
 								}
 							}
@@ -375,32 +477,49 @@ public class ChaserBehaviour extends SimpleBehaviour {
 					}
 				}
 			}
+		}
 		
 		//movement
-		if (this.lastKnownPosition==null){
-			//random movement
-			
-			//Random move from the current position
-			List<Couple<String,List<Couple<Observation,Integer>>>> lobs=((AbstractDedaleAgent)this.myAgent).observe();
-			Random r= new Random();
-			int moveId=1+r.nextInt(lobs.size()-1);//removing the current position from the list of target, not necessary as to stay is an action but allow quicker random move
-
-			//The move action (if any) should be the last action of your behaviour
-			((AbstractDedaleAgent)this.myAgent).moveTo(lobs.get(moveId).getLeft());
-		}
-		else {
-			
-			String myPosition=((AbstractDedaleAgent)this.myAgent).getCurrentPosition();
-			List<String> route = this.myMap.getShortestPath(myPosition,this.lastKnownPosition);
-			if (route.size()==0) {
-				System.out.println("I am at my last known position of the golem, time to go random");
-				this.lastKnownPosition=null;
+		if (this.move) {
+			if ((this.lastKnownPosition!=(((AbstractDedaleAgent)this.myAgent).getCurrentPosition()))&&(this.lastKnownPosition!=null)){
+				String myPosition=((AbstractDedaleAgent)this.myAgent).getCurrentPosition();
+				System.out.println(this.myAgent.getLocalName()+", I a at position "+myPosition+" and I need to go to "+this.lastKnownPosition);
+				List<String> route = this.myMap.getShortestPath(myPosition,this.lastKnownPosition);
+				if (route.size()==0) {
+					System.out.println(this.myAgent.getLocalName()+", I am at my last known position of the golem, time to go random");
+					this.lastKnownPosition=null;
+				}
+				else {
+					String nextNode = route.get(0);
+					System.out.println(this.myAgent.getLocalName()+", I am not moving randomly");
+					this.oldpos=((AbstractDedaleAgent)this.myAgent).getCurrentPosition();
+					((AbstractDedaleAgent)this.myAgent).moveTo(nextNode);
+				}
+				
 			}
 			else {
-				String nextNode = route.get(0);
-				((AbstractDedaleAgent)this.myAgent).moveTo(nextNode);
+				//random movement
+				System.out.println(this.myAgent.getLocalName()+", I am moving randomly");
+				
+				//Random move from the current position
+				List<Couple<String,List<Couple<Observation,Integer>>>> lobs=((AbstractDedaleAgent)this.myAgent).observe();
+				Random r= new Random();
+				int moveId=1+r.nextInt(lobs.size()-1);//removing the current position from the list of target, not necessary as to stay is an action but allow quicker random move
+	
+				//The move action (if any) should be the last action of your behaviour
+				this.oldpos=((AbstractDedaleAgent)this.myAgent).getCurrentPosition();
+				((AbstractDedaleAgent)this.myAgent).moveTo(lobs.get(moveId).getLeft());
 			}
-			
+		}
+		else {
+			System.out.println(this.myAgent.getLocalName()+",I have stopped moving, waiting for messages");
+			this.message_timer+=1;
+			if (this.message_timer%5==0) {
+				System.out.println(this.myAgent.getLocalName()+",I have waited, but nothing came, better start moving again");
+				this.move=true;
+				this.message_timer=0;
+				
+			}
 		}
 		
 	}
