@@ -406,6 +406,7 @@ public class MapRepresentation implements Serializable {
 		List<String> choice=new ArrayList();
 		List<String> possiblePoints=new ArrayList<String>();
 		Random rand = new Random();
+		System.out.println("I have "+nbAgents+ " at my disposal");
 		
 		Iterator<Node> iter=this.g.iterator();
 		while(iter.hasNext()){
@@ -446,10 +447,13 @@ public class MapRepresentation implements Serializable {
 			else {
 				if (mode==3) {
 					int nbrestant=nbAgents;
-					while((nbrestant>2)&&(possiblePoints.size()>1)) {
+					while(possiblePoints.size()>1) {
 						String choice1 = possiblePoints.get(rand.nextInt(possiblePoints.size()));
 						while ((choice.contains(choice1))||(getSurroundingPoints(choice1).size()>nbrestant)) {
 							possiblePoints.remove(choice1);
+							if (possiblePoints.size()==0) {
+								return choice;
+							}
 							choice1 = possiblePoints.get(rand.nextInt(possiblePoints.size()));
 						}
 						choice.add(choice1);
