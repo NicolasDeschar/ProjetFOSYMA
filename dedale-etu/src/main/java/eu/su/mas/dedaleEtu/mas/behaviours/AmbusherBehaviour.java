@@ -58,7 +58,7 @@ public class AmbusherBehaviour extends SimpleBehaviour {
 
 	@Override
 	public void action() {
-		System.out.println("I have to block position "+this.objective+" and I am at position "+((AbstractDedaleAgent)this.myAgent).getCurrentPosition());
+		System.out.println(this.myAgent.getLocalName()+",I have to block position "+this.objective+" and I am at position "+((AbstractDedaleAgent)this.myAgent).getCurrentPosition());
 		List<Couple<String, List<Couple<Observation, Integer>>>> odor = ((AbstractDedaleAgent) this.myAgent).observe();
 		for (int i=0; i<odor.size();i++) {
 			Couple<String, List<Couple<Observation, Integer>>> data = odor.get(i);

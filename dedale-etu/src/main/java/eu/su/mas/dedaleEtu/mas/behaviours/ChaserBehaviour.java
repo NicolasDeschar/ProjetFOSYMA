@@ -76,14 +76,13 @@ public class ChaserBehaviour extends SimpleBehaviour {
 
 	public ChaserBehaviour(final AbstractDedaleAgent myagent, MapRepresentation myMap, String lastKnownPosition, int nbGolem) {
 		super(myagent);
-		System.out.println("I am alive ");
 		this.myMap=myMap;
 		this.lastKnownPosition=lastKnownPosition;
 		this.move=true;
 		this.list_agentNames_chasse=new ArrayList<AID>();
 		this.list_agentNames_explo=new ArrayList<AID>();
 		this.nbGolem=nbGolem;
-		this.mode=1;
+		this.mode=3;
 		this.oldpos=((AbstractDedaleAgent)this.myAgent).getCurrentPosition();
 		this.listblockers=new ArrayList<AID>();
 		this.koth=true;
@@ -92,17 +91,24 @@ public class ChaserBehaviour extends SimpleBehaviour {
 		System.out.println(this.myAgent.getLocalName()+", my last known position is "+this.lastKnownPosition);
 		
 		DFAgentDescription dfd = new DFAgentDescription();
-		ServiceDescription sd = new ServiceDescription();sd.setType( "CHASSE" ); 
-		dfd.addServices(sd);
-		DFAgentDescription[] result=null;
-		try {
-			result=DFService.search(this.myAgent , dfd);
-			} catch (FIPAException e) {
-				e.printStackTrace();
-				}
-		for(int i=0;i<result.length;i++) {
-			this.list_agentNames_chasse.add(result[i].getName());
-			}
+        ServiceDescription sd = new ServiceDescription();sd.setType( "CHASSE" ); 
+        dfd.addServices(sd);
+        DFAgentDescription[] result=null;
+        try {
+             result=DFService.search(this.myAgent , dfd);
+        } catch (FIPAException e) {
+            e.printStackTrace();
+        }
+        DFAgentDescription me = new DFAgentDescription();
+        me.setName(this.myAgent.getAID());
+        
+        List<AID> list_agentNames = new ArrayList<AID>();
+        for(int i=0;i<result.length;i++) {
+            list_agentNames.add(result[i].getName());
+        }
+        list_agentNames.remove(me.getName());
+        System.out.println(list_agentNames);
+        this.list_agentNames_chasse=list_agentNames;
 		
 		DFAgentDescription dfd1 = new DFAgentDescription();
 		ServiceDescription sd1 = new ServiceDescription();sd1.setType( "EXPLORATION" ); 
@@ -117,7 +123,7 @@ public class ChaserBehaviour extends SimpleBehaviour {
 			this.list_agentNames_explo.add(result1[i].getName());
 			}
 		
-		this.nbAgents=this.list_agentNames_explo.size()+this.list_agentNames_chasse.size();
+		this.nbAgents=this.list_agentNames_explo.size()+this.list_agentNames_chasse.size()+1;
 		
 		this.AmbushPoint=myMap.getAmbushPoint(nbAgents,this.nbGolem, this.mode);
 		System.out.println(this.myAgent.getLocalName()+", We will try to ambush the target at point "+this.AmbushPoint.toString());
@@ -152,6 +158,7 @@ public class ChaserBehaviour extends SimpleBehaviour {
 		
 		
 		//critère d'arrêt
+		String blockpos = null;
 		if (((AbstractDedaleAgent)this.myAgent).getCurrentPosition()==this.oldpos) {
 			boolean gol=false;
 			List<Couple<String, List<Couple<Observation, Integer>>>> odor = ((AbstractDedaleAgent) this.myAgent).observe();
@@ -165,47 +172,52 @@ public class ChaserBehaviour extends SimpleBehaviour {
 					if (obs.getName().compareTo("Stench")==0){
 						gol=true;
 						this.blok=pos;
+						blockpos=pos;
 					}
 				}
 			}
 			if (gol) {
-				this.listblockers=new ArrayList<AID>();
-				System.out.println(this.myAgent.getLocalName()+", Seems that I am blocked by the golem, maybe he's trapped");
-				ACLMessage msg=new ACLMessage(ACLMessage.INFORM);
-				msg.setSender(this.myAgent.getAID());
-				msg.setProtocol("Chase");
-				msg.setContent("is_golem_blocked");
-				
-				this.list_agentNames_chasse=new ArrayList();				
-				DFAgentDescription dfd = new DFAgentDescription();
-				ServiceDescription sd = new ServiceDescription();sd.setType( "CHASSE" ); 
-				dfd.addServices(sd);
-				DFAgentDescription[] result=null;
-				try {
-					result=DFService.search(this.myAgent , dfd);
+				if (this.myMap.getSurroundingPoints(blockpos).size()==1) {
+					System.out.println(this.myAgent.getLocalName()+",The golem is blocked on a leaf");
+				}
+				else {
+					this.listblockers=new ArrayList<AID>();
+					System.out.println(this.myAgent.getLocalName()+", Seems that I am blocked by the golem, maybe he's trapped");
+					ACLMessage msg=new ACLMessage(ACLMessage.INFORM);
+					msg.setSender(this.myAgent.getAID());
+					msg.setProtocol("Chase");
+					msg.setContent("is_golem_blocked");
+					
+					this.list_agentNames_chasse=new ArrayList();				
+					DFAgentDescription dfd = new DFAgentDescription();
+					ServiceDescription sd = new ServiceDescription();sd.setType( "CHASSE" ); 
+					dfd.addServices(sd);
+					DFAgentDescription[] result=null;
+					try {
+						 result=DFService.search(this.myAgent , dfd);
 					} catch (FIPAException e) {
 						e.printStackTrace();
-						}
-				for(int i=0;i<result.length;i++) {
-					this.list_agentNames_chasse.add(result[i].getName());
 					}
-				
-				
-				for (int k=0;k<this.list_agentNames_chasse.size();k++){
-					String elem = this.list_agentNames_chasse.get(k).toString();
-					if (elem.compareTo(this.myAgent.getAID().toString())==0) {
-						this.list_agentNames_chasse.remove(k);
-						k-=1;
+					DFAgentDescription me = new DFAgentDescription();
+					me.setName(this.myAgent.getAID());
+					
+					List<AID> list_agentNames = new ArrayList<AID>();
+					for(int i=0;i<result.length;i++) {
+						list_agentNames.add(result[i].getName());
 					}
-				}
+					list_agentNames.remove(me.getName());
+					System.out.println(this.myAgent.getLocalName()+"My agent list "+list_agentNames);
+					this.list_agentNames_chasse=list_agentNames;
+
+						
+						
 					
+					for (int u=0;u<this.list_agentNames_chasse.size();u++) {
+						msg.addReceiver(this.list_agentNames_chasse.get(u));
+					}
 					
-				
-				for (int u=0;u<this.list_agentNames_chasse.size();u++) {
-					msg.addReceiver(this.list_agentNames_chasse.get(u));
+					((AbstractDedaleAgent)this.myAgent).sendMessage(msg);
 				}
-				
-				((AbstractDedaleAgent)this.myAgent).sendMessage(msg);
 			}
 		}
 		
@@ -376,7 +388,7 @@ public class ChaserBehaviour extends SimpleBehaviour {
 						
 					}
 					else {
-						if (sgreceived.compareTo("is_golem_blocked")==0) {
+						if ((sgreceived.compareTo("is_golem_blocked")==0)||sgreceived.compareTo("he's_done")==0) {
 							assert true;							
 						}
 						else {
@@ -404,7 +416,7 @@ public class ChaserBehaviour extends SimpleBehaviour {
 										String sub=sgreceived.substring(1,sgreceived.length());
 										int othersent= Integer.parseInt(sub);
 										System.out.println("my ambusher count : "+this.ambusher_sent);
-										System.out.println("the other's ambusher count"+ othersent);
+										System.out.println("the other's ambusher count "+ othersent);
 										if (othersent>this.ambusher_sent) {
 											this.koth=false;
 											AID sender = msgReceived.getSender();
