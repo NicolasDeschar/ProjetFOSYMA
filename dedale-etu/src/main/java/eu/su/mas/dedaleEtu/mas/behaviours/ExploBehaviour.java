@@ -23,6 +23,8 @@ public class ExploBehaviour extends OneShotBehaviour {
 
 	@Override
 	public void action() {
+		this.myAgent.doWait(1000);
+
 		String myPosition=((AbstractDedaleAgent)this.myAgent).getCurrentPosition();
 		if(((ExploreCoopAgent)this.myAgent).getPriority().contains(myPosition)) {
 			List<String> p = ((ExploreCoopAgent)this.myAgent).getPriority();
@@ -53,7 +55,6 @@ public class ExploBehaviour extends OneShotBehaviour {
 			//2) get the surrounding nodes and, if not in closedNodes, add them to open nodes.
 			String nextNode=null;
 			if(((ExploreCoopAgent)this.myAgent).getPriority().size()>0) {
-				System.out.println("test");
 				if(this.myAgent.getMap().getShortestPath(myPosition,((ExploreCoopAgent)this.myAgent).getPriority().get(0))!=null) {
 					nextNode=this.myAgent.getMap().getShortestPath(myPosition,((ExploreCoopAgent)this.myAgent).getPriority().get(0)).get(0);
 					System.out.println(this.myAgent.getLocalName()+"-- Priority list= "+((ExploreCoopAgent)this.myAgent).getPriority()+"| nextNode: "+nextNode);

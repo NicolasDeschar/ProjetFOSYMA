@@ -58,6 +58,7 @@ public class AmbusherBehaviour extends SimpleBehaviour {
 
 	@Override
 	public void action() {
+		this.myAgent.doWait(1000);
 		System.out.println(this.myAgent.getLocalName()+",I have to block position "+this.objective+" and I am at position "+((AbstractDedaleAgent)this.myAgent).getCurrentPosition());
 		List<Couple<String, List<Couple<Observation, Integer>>>> odor = ((AbstractDedaleAgent) this.myAgent).observe();
 		for (int i=0; i<odor.size();i++) {

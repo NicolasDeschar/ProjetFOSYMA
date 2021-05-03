@@ -156,7 +156,7 @@ public class ChaserBehaviour extends SimpleBehaviour {
 	@Override
 	public void action() {
 		
-		
+		this.myAgent.doWait(1000);
 		//critère d'arrêt
 		String blockpos = null;
 		if (((AbstractDedaleAgent)this.myAgent).getCurrentPosition()==this.oldpos) {
